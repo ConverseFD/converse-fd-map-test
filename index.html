@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Converse Fire Department Street Map Test</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css">
+  <style>
+    :root {
+      --bg:#0f172a; --panel:#111827; --panel2:#1f2937; --text:#f8fafc;
+      --muted:#94a3b8; --accent:#f97316; --good:#22c55e; --bad:#ef4444;
+      --line:#334155;
+    }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif; background:var(--bg); color:var(--text); }
+    header { padding:14px 18px; border-bottom:1px solid var(--line); display:flex; gap:16px; align-items:center; flex-wrap:wrap; }
+    header h1 { font-size:18px; margin:0; }
+    header .sub { color:var(--muted); font-size:13px; }
+    main { display:grid; grid-template-columns:350px 1fr; height:calc(100vh - 67px); }
+    aside { padding:14px; overflow:auto; background:var(--panel); border-right:1px solid var(--line); }
+    #map { width:100%; height:100%; background:#dbeafe; }
+    .card { background:var(--panel2); border:1px solid var(--line); border-radius:12px; padding:12px; margin-bottom:12px; }
+    .card h2 { margin:0 0 9px; font-size:15px; }
+    label { display:block; color:var(--muted); font-size:12px; margin:8px 0 4px; }
+    select,input,button { width:100%; border-radius:8px; border:1px solid #475569; padding:9px 10px; font:inherit; }
+    input,select { background:#0b1220; color:var(--text); }
+    button { background:#334155; color:white; cursor:pointer; font-weight:650; margin-top:7px; }
+    button.primary { background:var(--accent); border-color:var(--accent); color:#111827; }
+    button.good { background:var(--good); border-color:var(--good); color:#052e16; }
+    button.danger { background:#7f1d1d; border-color:#991b1b; }
+    button:disabled { opacity:.45; cursor:not-allowed; }
+    .row { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .stats { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
+    .stat { background:#0b1220; border-radius:8px; padding:8px; text-align:center; }
+    .stat b { display:block; font-size:18px; }
+    .stat span { font-size:10px; color:var(--muted); text-transform:uppercase; }
+    #question { font-size:18px; line-height:1.3; min-height:48px; }
+    #feedback { min-height:36px; font-weight:650; margin-top:8px; }
+    .muted { color:var(--muted); font-size:12px; line-height:1.45; }
+    .status { padding:8px; border-radius:8px; background:#0b1220; font-size:12px; line-height:1.4; }
+    .goodText { color:#86efac; }
+    .badText { color:#fca5a5; }
+    .warnText { color:#fdba74; }
+    .street-list { max-height:190px; overflow:auto; font-size:12px; border:1px solid var(--line); border-radius:8px; }
+    .street-list div { padding:6px 8px; border-bottom:1px solid #273449; }
+    .street-list div:last-child { border-bottom:0; }
+    .pill { display:inline-block; padding:3px 7px; border-radius:999px; background:#0b1220; color:var(--muted); font-size:11px; margin:2px; }
+    @media (max-width:820px) {
+      header { padding:10px 12px; }
+      main { display:flex; flex-direction:column; height:auto; }
+      aside { border-right:0; height:auto; }
+      #map { height:62vh; min-height:420px; }
+    }
+  </style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Converse Fire Department Street Map Test</h1>
+    <div class="sub">Study and test streets across Converse + the ESD 1 response area</div>
+  </div>
+</header>
+
+<main>
+<aside>
+  <div class="card">
+    <h2>1. Response Area & Street Data</h2>
+    <div class="status" id="dataStatus">Using the embedded Converse Fire Department response-area boundary.</div>
+    <button class="primary" id="loadBtn">Load Streets from OpenStreetMap</button>
+    <div class="row">
+      <button id="drawBtn">Draw Exact Boundary</button>
+      <button id="resetBoundaryBtn">Reset Boundary</button>
+    </div>
+    <button id="exportBoundaryBtn">Export Saved Boundary</button>
+    <label>Import official boundary (GeoJSON)</label>
+    <input type="file" id="geojsonInput" accept=".json,.geojson,application/geo+json">
+    <p class="muted">The official response-area boundary is embedded in this website. Drawing or importing another boundary only changes it on the current device.</p>
+  </div>
+
+  <div class="card">
+    <h2>2. Test Setup</h2>
+    <label>Mode</label>
+    <select id="mode">
+      <option value="name">Name the highlighted street</option>
+      <option value="locate">Click the named street</option>
+      <option value="multiple">Multiple choice</option>
+      <option value="study">Study mode</option>
+    </select>
+    <label>Street group</label>
+    <select id="roadClass">
+      <option value="all">All named streets</option>
+      <option value="major">Major roads only</option>
+      <option value="residential">Neighborhood streets</option>
+    </select>
+    <label>Number of questions</label>
+    <select id="questionCount">
+      <option>10</option><option>20</option><option>30</option><option value="50">50</option>
+      <option value="all">All available</option>
+    </select>
+    <label><input id="missedOnly" type="checkbox" style="width:auto;vertical-align:middle"> Missed streets only</label>
+    <button class="good" id="startBtn" disabled>Start Test</button>
+  </div>
+
+  <div class="card">
+    <h2>Question</h2>
+    <div id="question">Load streets, then start a test.</div>
+    <div id="answerArea">
+      <input id="answerInput" placeholder="Type the street name" autocomplete="off">
+      <button class="primary" id="submitBtn" disabled>Submit Answer</button>
+      <div id="choices"></div>
+    </div>
+    <div id="feedback"></div>
+    <button id="nextBtn" disabled>Next Question</button>
+  </div>
+
+  <div class="card">
+    <h2>Score</h2>
+    <div class="stats">
+      <div class="stat"><b id="correctStat">0</b><span>Correct</span></div>
+      <div class="stat"><b id="askedStat">0</b><span>Answered</span></div>
+      <div class="stat"><b id="pctStat">0%</b><span>Score</span></div>
+    </div>
+    <button id="clearMissedBtn" class="danger">Clear Missed-Street History</button>
+  </div>
+
+  <div class="card">
+    <h2>Loaded Streets</h2>
+    <div><span class="pill" id="streetCountPill">0 streets</span><span class="pill" id="segmentCountPill">0 segments</span></div>
+    <input id="streetSearch" placeholder="Filter street list">
+    <div class="street-list" id="streetList"></div>
+  </div>
+</aside>
+<div id="map"></div>
+</main>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+<script>
+const map = L.map('map', {preferCanvas:true}).setView([29.488, -98.318], 12);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom:19, attribution:'&copy; OpenStreetMap contributors'
+}).addTo(map);
+
+const starterBoundary = {"type":"Feature","properties":{"name":"Converse Fire Department Response Area"},"geometry":{"type":"Polygon","coordinates":[[[-98.333805,29.510969],[-98.333033,29.513583],[-98.344879,29.517092],[-98.341789,29.520751],[-98.344755,29.522389],[-98.346558,29.526122],[-98.352739,29.530527],[-98.337029,29.538627],[-98.334153,29.537096],[-98.33102,29.538627],[-98.325612,29.535491],[-98.322865,29.532468],[-98.321019,29.533812],[-98.318401,29.535155],[-98.315396,29.536835],[-98.308958,29.527316],[-98.305052,29.531796],[-98.303421,29.532468],[-98.298828,29.53635],[-98.297969,29.535155],[-98.298785,29.530527],[-98.288741,29.515221],[-98.283547,29.515445],[-98.280843,29.510629],[-98.28123,29.510181],[-98.279985,29.508426],[-98.284105,29.505962],[-98.277238,29.504207],[-98.278783,29.499353],[-98.269383,29.496926],[-98.273031,29.491063],[-98.27492,29.489793],[-98.276551,29.487403],[-98.281058,29.480718],[-98.277152,29.487665],[-98.285007,29.488038],[-98.287282,29.487366],[-98.28887,29.486507],[-98.29093,29.485162],[-98.298785,29.486544],[-98.299214,29.485312],[-98.297927,29.484938],[-98.299171,29.483482],[-98.299944,29.480606],[-98.299429,29.47717],[-98.297927,29.470149],[-98.296424,29.466563],[-98.30591,29.468841],[-98.308056,29.462603],[-98.310675,29.463201],[-98.31076,29.46279],[-98.316555,29.461147],[-98.315525,29.464322],[-98.319989,29.470821],[-98.327329,29.48098],[-98.328573,29.483071],[-98.329561,29.483557],[-98.32926,29.484154],[-98.330033,29.484714],[-98.33102,29.48647],[-98.331793,29.48703],[-98.33205,29.488262],[-98.332951,29.488822],[-98.3369,29.49476],[-98.337931,29.495805],[-98.339476,29.49644],[-98.341579,29.496701],[-98.343253,29.496291],[-98.344712,29.495768],[-98.346515,29.495581],[-98.348189,29.495917],[-98.349219,29.496664],[-98.34806,29.496403],[-98.34248,29.500211],[-98.337158,29.506111],[-98.335959,29.507544],[-98.337397,29.508739],[-98.333805,29.510969]]]}};
+
+let boundaryFeature = JSON.parse(localStorage.getItem('cfdBoundary') || 'null') || starterBoundary;
+let boundaryLayer, roadsLayer = L.layerGroup().addTo(map), highlightLayer = L.layerGroup().addTo(map);
+let roadFeatures=[], grouped={}, activePool=[], current=null, queue=[], correct=0, asked=0, waitingNext=false;
+let missed = new Set(JSON.parse(localStorage.getItem('cfdMissed') || '[]'));
+
+function showBoundary() {
+  if (boundaryLayer) map.removeLayer(boundaryLayer);
+  boundaryLayer = L.geoJSON(boundaryFeature, {
+    style:{color:'#f97316',weight:3,fillOpacity:.05,dashArray:'8 6'}
+  }).addTo(map);
+  map.fitBounds(boundaryLayer.getBounds(), {padding:[20,20]});
+}
+showBoundary();
+
+const drawnItems = new L.FeatureGroup().addTo(map);
+const drawControl = new L.Control.Draw({
+  edit:{featureGroup:drawnItems, edit:false, remove:false},
+  draw:{polygon:true,rectangle:true,polyline:false,circle:false,circlemarker:false,marker:false}
+});
+let drawingEnabled=false;
+document.getElementById('drawBtn').onclick=()=>{
+  if(!drawingEnabled){ map.addControl(drawControl); drawingEnabled=true; }
+  new L.Draw.Polygon(map, drawControl.options.draw.polygon).enable();
+};
+map.on(L.Draw.Event.CREATED, e=>{
+  drawnItems.clearLayers(); drawnItems.addLayer(e.layer);
+  boundaryFeature=e.layer.toGeoJSON();
+  localStorage.setItem('cfdBoundary',JSON.stringify(boundaryFeature));
+  showBoundary();
+  clearRoads();
+  setStatus('Custom boundary saved. Reload streets for the new area.','warn');
+});
+
+document.getElementById('resetBoundaryBtn').onclick=()=>{
+  boundaryFeature=starterBoundary;
+  localStorage.removeItem('cfdBoundary');
+  showBoundary(); clearRoads();
+  setStatus('Embedded Converse Fire Department response-area boundary restored. Load streets to begin.','warn');
+};
+
+document.getElementById('exportBoundaryBtn').onclick=()=>{
+  try {
+    const saved = JSON.parse(localStorage.getItem('cfdBoundary') || 'null');
+    if (!saved) {
+      alert('No custom boundary is saved in this browser. Open this file in the same browser where you drew the boundary.');
+      return;
+    }
+    const blob = new Blob([JSON.stringify(saved, null, 2)], {type:'application/geo+json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'converse_fd_response_boundary.geojson';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    alert('Could not export the boundary: ' + err.message);
+  }
+};
+
+document.getElementById('geojsonInput').onchange=async e=>{
+  try {
+    const obj=JSON.parse(await e.target.files[0].text());
+    let f=obj;
+    if(obj.type==='FeatureCollection') f=obj.features.find(x=>['Polygon','MultiPolygon'].includes(x.geometry?.type));
+    if(!f || !['Polygon','MultiPolygon'].includes(f.geometry?.type)) throw new Error('No polygon found');
+    boundaryFeature=f;
+    localStorage.setItem('cfdBoundary',JSON.stringify(boundaryFeature));
+    showBoundary(); clearRoads();
+    setStatus('Official/custom GeoJSON boundary imported. Reload streets.','good');
+  } catch(err){ setStatus('Could not import that GeoJSON: '+err.message,'bad'); }
+};
+
+function setStatus(text,type='') {
+  const el=document.getElementById('dataStatus');
+  el.textContent=text; el.className='status '+(type==='good'?'goodText':type==='bad'?'badText':type==='warn'?'warnText':'');
+}
+function clearRoads(){
+  roadFeatures=[]; grouped={}; roadsLayer.clearLayers(); highlightLayer.clearLayers();
+  updateStreetUI(); document.getElementById('startBtn').disabled=true;
+}
+function getBBox(){
+  const b=L.geoJSON(boundaryFeature).getBounds();
+  return [b.getSouth(),b.getWest(),b.getNorth(),b.getEast()];
+}
+function normalized(s){
+  return (s||'').toLowerCase().replace(/\b(street|st)\b/g,'st').replace(/\b(road|rd)\b/g,'rd')
+   .replace(/\b(drive|dr)\b/g,'dr').replace(/\b(lane|ln)\b/g,'ln')
+   .replace(/\b(avenue|ave)\b/g,'ave').replace(/\b(boulevard|blvd)\b/g,'blvd')
+   .replace(/\b(highway|hwy)\b/g,'hwy').replace(/\b(parkway|pkwy)\b/g,'pkwy')
+   .replace(/\b(circle|cir)\b/g,'cir').replace(/\b(court|ct)\b/g,'ct')
+   .replace(/\b(place|pl)\b/g,'pl').replace(/\s+/g,' ').trim();
+}
+function roadCategory(hw){
+  if(['motorway','trunk','primary','secondary','tertiary','motorway_link','trunk_link','primary_link','secondary_link','tertiary_link'].includes(hw)) return 'major';
+  return 'residential';
+}
+async function loadStreets(){
+  const btn=document.getElementById('loadBtn'); btn.disabled=true;
+  setStatus('Requesting named streets from OpenStreetMap…');
+  try{
+    const [s,w,n,e]=getBBox();
+    const query=`[out:json][timeout:60];way["highway"]["name"](${s},${w},${n},${e});out geom;`;
+    const endpoints=['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter'];
+    let data=null, lastErr;
+    for(const endpoint of endpoints){
+      try{
+        const r=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'data='+encodeURIComponent(query)});
+        if(!r.ok) throw new Error('HTTP '+r.status);
+        data=await r.json(); break;
+      }catch(err){lastErr=err;}
+    }
+    if(!data) throw lastErr || new Error('No Overpass server responded');
+
+    const poly=boundaryFeature;
+    const features=[];
+    for(const el of data.elements){
+      if(!el.geometry || !el.tags?.name) continue;
+      const coords=el.geometry.map(p=>[p.lon,p.lat]);
+      if(coords.length<2) continue;
+      const line=turf.lineString(coords,{
+        id:el.id,name:el.tags.name,highway:el.tags.highway,category:roadCategory(el.tags.highway)
+      });
+      let include=false;
+      try{
+        include=turf.booleanIntersects(line,poly);
+      }catch(_){ include=true; }
+      if(include) features.push(line);
+    }
+    roadFeatures=features;
+    grouped={};
+    for(const f of roadFeatures){
+      const name=f.properties.name;
+      (grouped[name] ||= []).push(f);
+    }
+    drawRoads();
+    updateStreetUI();
+    document.getElementById('startBtn').disabled=Object.keys(grouped).length<4;
+    setStatus(`Loaded ${Object.keys(grouped).length} named streets from ${roadFeatures.length} road segments.`,'good');
+  }catch(err){
+    setStatus('Street loading failed: '+err.message+'. Try again in a moment or use a different network.','bad');
+  }finally{btn.disabled=false;}
+}
+document.getElementById('loadBtn').onclick=loadStreets;
+
+function drawRoads(){
+  roadsLayer.clearLayers();
+  for(const f of roadFeatures){
+    L.geoJSON(f,{
+      style:{color:'#64748b',weight:f.properties.category==='major'?4:2,opacity:.72},
+      onEachFeature:(feature,layer)=>{
+        layer.bindTooltip(feature.properties.name,{sticky:true});
+        layer.on('click',()=>handleMapClick(feature.properties.name));
+      }
+    }).addTo(roadsLayer);
+  }
+}
+function updateStreetUI(){
+  const names=Object.keys(grouped).sort();
+  document.getElementById('streetCountPill').textContent=names.length+' streets';
+  document.getElementById('segmentCountPill').textContent=roadFeatures.length+' segments';
+  renderStreetList();
+}
+function renderStreetList(){
+  const q=document.getElementById('streetSearch').value.toLowerCase();
+  const names=Object.keys(grouped).filter(n=>n.toLowerCase().includes(q)).sort();
+  document.getElementById('streetList').innerHTML=names.slice(0,500).map(n=>`<div>${escapeHtml(n)}${missed.has(n)?' <span class="badText">• missed</span>':''}</div>`).join('');
+}
+document.getElementById('streetSearch').oninput=renderStreetList;
+function escapeHtml(s){return s.replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+
+function selectedPool(){
+  const cls=document.getElementById('roadClass').value;
+  let names=Object.keys(grouped).filter(name=>{
+    if(cls==='all') return true;
+    return grouped[name].some(f=>f.properties.category===cls);
+  });
+  if(document.getElementById('missedOnly').checked) names=names.filter(n=>missed.has(n));
+  return names;
+}
+function shuffle(a){return [...a].sort(()=>Math.random()-.5);}
+function startTest(){
+  const mode=document.getElementById('mode').value;
+  activePool=selectedPool();
+  if(activePool.length<2){ alert('Not enough streets match those settings.'); return; }
+  correct=0;asked=0; updateStats(); waitingNext=false;
+  const countVal=document.getElementById('questionCount').value;
+  const count=countVal==='all'?activePool.length:Math.min(Number(countVal),activePool.length);
+  queue=shuffle(activePool).slice(0,count);
+  if(mode==='study'){ showStudy(); return; }
+  nextQuestion();
+}
+document.getElementById('startBtn').onclick=startTest;
+
+function showStudy(){
+  highlightLayer.clearLayers();
+  document.getElementById('question').textContent='Study mode: click or hover over any street to see its name.';
+  document.getElementById('answerArea').style.display='none';
+  document.getElementById('nextBtn').disabled=true;
+  for(const [name,fs] of Object.entries(grouped)){
+    fs.forEach(f=>L.geoJSON(f,{style:{color:'#2563eb',weight:4,opacity:.8}})
+      .bindTooltip(name,{sticky:true}).addTo(highlightLayer));
+  }
+}
+function nextQuestion(){
+  if(!queue.length){
+    document.getElementById('question').textContent=`Test complete — ${correct} correct out of ${asked}.`;
+    document.getElementById('feedback').textContent='';
+    document.getElementById('answerArea').style.display='none';
+    document.getElementById('nextBtn').disabled=true;
+    return;
+  }
+  document.getElementById('answerArea').style.display='block';
+  document.getElementById('feedback').textContent='';
+  document.getElementById('choices').innerHTML='';
+  document.getElementById('answerInput').value='';
+  document.getElementById('nextBtn').disabled=true;
+  document.getElementById('submitBtn').disabled=false;
+  waitingNext=false;
+  current=queue.shift();
+  const mode=document.getElementById('mode').value;
+  highlightLayer.clearLayers();
+  resetRoadStyles();
+
+  if(mode==='name' || mode==='multiple'){
+    highlightStreet(current,'#f97316',8,true);
+    document.getElementById('question').textContent='What street is highlighted?';
+    document.getElementById('answerInput').style.display=mode==='name'?'block':'none';
+    document.getElementById('submitBtn').style.display=mode==='name'?'block':'none';
+    if(mode==='multiple') makeChoices();
+  }else if(mode==='locate'){
+    document.getElementById('question').textContent=`Click ${current} on the map.`;
+    document.getElementById('answerInput').style.display='none';
+    document.getElementById('submitBtn').style.display='none';
+  }
+}
+function resetRoadStyles(){ drawRoads(); }
+function highlightStreet(name,color='#f97316',weight=8,zoom=false){
+  const layers=[];
+  (grouped[name]||[]).forEach(f=>{
+    const l=L.geoJSON(f,{style:{color,weight,opacity:1}}).addTo(highlightLayer);
+    layers.push(l);
+  });
+  if(zoom && layers.length){
+    const fg=L.featureGroup(layers);
+    map.fitBounds(fg.getBounds(),{padding:[50,50],maxZoom:16});
+  }
+}
+function makeChoices(){
+  const distractors=shuffle(activePool.filter(n=>n!==current)).slice(0,3);
+  const choices=shuffle([current,...distractors]);
+  document.getElementById('choices').innerHTML=choices.map(c=>`<button class="choice" data-name="${escapeHtml(c)}">${escapeHtml(c)}</button>`).join('');
+  document.querySelectorAll('.choice').forEach(b=>b.onclick=()=>grade(b.dataset.name));
+}
+function grade(answer){
+  if(waitingNext) return;
+  const isCorrect=normalized(answer)===normalized(current);
+  asked++; if(isCorrect){correct++; missed.delete(current);}
+  else missed.add(current);
+  localStorage.setItem('cfdMissed',JSON.stringify([...missed]));
+  updateStats(); renderStreetList();
+  const fb=document.getElementById('feedback');
+  fb.innerHTML=isCorrect?`<span class="goodText">Correct — ${escapeHtml(current)}</span>`:
+    `<span class="badText">Incorrect.</span> The answer was <b>${escapeHtml(current)}</b>.`;
+  highlightLayer.clearLayers(); highlightStreet(current,isCorrect?'#22c55e':'#ef4444',9,true);
+  waitingNext=true;
+  document.getElementById('submitBtn').disabled=true;
+  document.getElementById('nextBtn').disabled=false;
+}
+document.getElementById('submitBtn').onclick=()=>grade(document.getElementById('answerInput').value);
+document.getElementById('answerInput').addEventListener('keydown',e=>{if(e.key==='Enter') grade(e.target.value);});
+document.getElementById('nextBtn').onclick=nextQuestion;
+
+function handleMapClick(name){
+  if(document.getElementById('mode').value!=='locate' || !current || waitingNext) return;
+  grade(name);
+}
+function updateStats(){
+  document.getElementById('correctStat').textContent=correct;
+  document.getElementById('askedStat').textContent=asked;
+  document.getElementById('pctStat').textContent=(asked?Math.round(correct/asked*100):0)+'%';
+}
+document.getElementById('clearMissedBtn').onclick=()=>{
+  missed.clear(); localStorage.removeItem('cfdMissed'); renderStreetList();
+  alert('Missed-street history cleared.');
+};
+document.getElementById('mode').onchange=e=>{
+  document.getElementById('question').textContent=e.target.value==='study'?'Start study mode to label all streets.':'Choose settings and start a test.';
+};
+</script>
+</body>
+</html>
