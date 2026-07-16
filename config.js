@@ -1,4 +1,4 @@
 const CFD_CONFIG = {
-  SUPABASE_URL: "YOUR_SUPABASE_PROJECT_URL",
-  SUPABASE_ANON_KEY: "YOUR_SUPABASE_PUBLISHABLE_ANON_KEY"
+  SUPABASE_URL: "https://xgyrbnpvwfmsbzewlwem.supabase.co",
+  SUPABASE_ANON_KEY: "sb_publishable_KEqJDL6jCMqfUHmf1DY1Iw_I281Hr9C"
 };
