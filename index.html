@@ -240,7 +240,7 @@ button:disabled{opacity:.48;cursor:not-allowed;transform:none}
   background:#03152d;
 }
 .street-list div{padding:7px 8px;border-bottom:1px solid #1f4676}
-.street-list div:last-child{border-bottom:0}
+.street-list div:last-child{border-bottom:0}.studyStreet{cursor:pointer}.studyStreet:hover{background:#0a2f63;color:#ffd56a}
 .timerWarn{color:var(--gold)}
 .questionPanel{
   background:linear-gradient(180deg,#061f44,#041833);
@@ -424,7 +424,7 @@ button:disabled{opacity:.48;cursor:not-allowed;transform:none}
     </div>
   </div>
 
-  <div class="card">
+  <div class="card" id="streetDirectoryCard">
     <h2>● Street Search</h2>
     <input id="streetSearch" placeholder="Search loaded streets">
     <div id="streetList" class="street-list"></div>
@@ -493,6 +493,7 @@ let deviceId=localStorage.getItem(DEVICE_KEY);
 if(!deviceId){deviceId=crypto.randomUUID();localStorage.setItem(DEVICE_KEY,deviceId)}
 let sessionStartedAt=null, sessionFinishedAt=null, sessionSaved=false, plannedQuestions=0;
 let sessionMissedStreets=[];
+let sessionCorrectStreets=[];
 
 async function recordVisit(){
   if(!db) return;
@@ -518,7 +519,8 @@ async function saveCompletedResult(){
     started_at:sessionStartedAt?.toISOString() || new Date().toISOString(),
     completed_at:sessionFinishedAt?.toISOString() || new Date().toISOString(),
     device_id:deviceId,
-    missed_streets:sessionMissedStreets
+    missed_streets:sessionMissedStreets,
+    correct_streets:sessionCorrectStreets
   };
   const {error}=await db.from('test_results').insert(result);
   if(error){console.error('Result save failed:',error);status('Test completed, but the department database could not be reached.','warnText')}
@@ -583,18 +585,34 @@ async function loadData(force=false){
  build(features);$('cachePill').textContent='Cached';status(`Ready: ${Object.keys(grouped).length} streets stored locally.`,'goodText');
 }
 $('refreshBtn').onclick=()=>{if(confirm('Refresh the cached street dataset now?'))loadData(true)};
-function updateDirectory(){const q=$('streetSearch').value.toLowerCase();$('streetList').innerHTML=Object.keys(grouped).filter(n=>n.toLowerCase().includes(q)).sort().slice(0,600).map(n=>`<div>${escapeHtml(n)}${missed.has(n)?' <span class="badText">• weak</span>':''}</div>`).join('')}
+function updateDirectory(){const q=$('streetSearch').value.toLowerCase();const study=$('mode').value==='study';$('streetList').innerHTML=Object.keys(grouped).filter(n=>n.toLowerCase().includes(q)).sort().slice(0,600).map(n=>`<div class="${study?'studyStreet':''}" data-street="${escapeHtml(n)}">${escapeHtml(n)}${missed.has(n)?' <span class="badText">• weak</span>':''}</div>`).join('');if(study)document.querySelectorAll('.studyStreet').forEach(el=>el.onclick=()=>showStudyStreet(el.dataset.street))}
 $('streetSearch').oninput=updateDirectory;
+
+function updateStudyDirectoryVisibility(){
+  const isStudy=$('mode').value==='study';
+  $('streetDirectoryCard').style.display=isStudy?'block':'none';
+  if(isStudy)updateDirectory();
+}
+function showStudyStreet(name){
+  if($('mode').value!=='study')return;
+  hiLayer.clearLayers();
+  highlight(name,'#f4b428',10,true);
+  $('question').textContent=`Study street: ${name}`;
+  $('feedback').innerHTML=`<span class="goodText">${escapeHtml(name)}</span> is highlighted on the map.`;
+}
+$('mode').addEventListener('change',updateStudyDirectoryVisibility);
+updateStudyDirectoryVisibility();
+
 function pool(){const c=$('roadClass').value;let a=Object.keys(grouped);if(c==='major'||c==='residential')a=a.filter(n=>grouped[n].some(f=>f.properties.category===c));if(c==='missed')a=a.filter(n=>missed.has(n));return a}
 function shuffle(a){return [...a].sort(()=>Math.random()-.5)}
 function start(){
- sessionStartedAt=new Date();sessionFinishedAt=null;sessionSaved=false;sessionMissedStreets=[];
+ sessionStartedAt=new Date();sessionFinishedAt=null;sessionSaved=false;sessionMissedStreets=[];sessionCorrectStreets=[];
  activePool=pool();if(activePool.length<2){alert('Not enough streets match those settings.');return}
  correct=asked=0;updateStats();const n=$('questionCount').value==='all'?activePool.length:Math.min(+$('questionCount').value,activePool.length);plannedQuestions=n;queue=shuffle(activePool).slice(0,n);
  if($('mode').value==='study')return study();next();
 }
 $('startBtn').onclick=start;
-function study(){clearInterval(timer);hiLayer.clearLayers();$('question').textContent='Study mode: hover over or click any street to see its name.';$('answerArea').style.display='none';for(const [name,fs] of Object.entries(grouped))fs.forEach(f=>L.geoJSON(f,{style:{color:'#2563eb',weight:4,opacity:.8}}).bindTooltip(name,{sticky:true}).addTo(hiLayer))}
+function study(){clearInterval(timer);updateStudyDirectoryVisibility();hiLayer.clearLayers();$('question').textContent='Study mode: hover over or click any street to see its name.';$('answerArea').style.display='none';for(const [name,fs] of Object.entries(grouped))fs.forEach(f=>L.geoJSON(f,{style:{color:'#2563eb',weight:4,opacity:.8}}).bindTooltip(name,{sticky:true}).addTo(hiLayer))}
 function next(){
  clearInterval(timer);if(!queue.length){sessionFinishedAt=new Date();saveCompletedResult();populatePrintReport();$('question').textContent=`Session complete — ${correct} correct out of ${asked}.`;$('feedback').textContent='';$('answerArea').style.display='none';$('nextBtn').disabled=true;$('timerStat').textContent='—';return}
  $('answerArea').style.display='block';$('feedback').textContent='';$('choices').innerHTML='';$('answerInput').value='';$('nextBtn').disabled=true;$('submitBtn').disabled=false;waiting=false;current=queue.shift();hiLayer.clearLayers();drawRoads();
@@ -604,7 +622,7 @@ function next(){
 function beginTimer(){clearInterval(timer);timeLeft=+$('timeLimit').value;if(!timeLeft){$('timerStat').textContent='—';return}$('timerStat').textContent=timeLeft;timer=setInterval(()=>{timeLeft--;$('timerStat').textContent=timeLeft;$('timerStat').className=timeLeft<=5?'timerWarn':'';if(timeLeft<=0){clearInterval(timer);grade('__TIME__')}},1000)}
 function highlight(name,color,w,zoom){const ls=[];(grouped[name]||[]).forEach(f=>ls.push(L.geoJSON(f,{style:{color,weight:w,opacity:1}}).addTo(hiLayer)));if(zoom&&ls.length)map.fitBounds(L.featureGroup(ls).getBounds(),{padding:[45,45],maxZoom:16})}
 function choices(){const opts=shuffle([current,...shuffle(activePool.filter(n=>n!==current)).slice(0,3)]);$('choices').innerHTML=opts.map(x=>`<button class="choice" data-n="${escapeHtml(x)}">${escapeHtml(x)}</button>`).join('');document.querySelectorAll('.choice').forEach(b=>b.onclick=()=>grade(b.dataset.n))}
-function grade(ans){if(waiting)return;clearInterval(timer);const ok=norm(ans)===norm(current);asked++;if(ok){correct++;missed.delete(current)}else{missed.add(current);sessionMissedStreets.push(current)}localStorage.setItem(MISSED_KEY,JSON.stringify([...missed]));updateStats();updateDirectory();$('feedback').innerHTML=ok?`<span class="goodText">Correct — ${escapeHtml(current)}</span>`:`<span class="badText">${ans==='__TIME__'?'Time expired.':'Incorrect.'}</span> Correct answer: <b>${escapeHtml(current)}</b>`;hiLayer.clearLayers();highlight(current,ok?'#22c55e':'#ef4444',9,true);waiting=true;$('submitBtn').disabled=true;$('nextBtn').disabled=false}
+function grade(ans){if(waiting)return;clearInterval(timer);const ok=norm(ans)===norm(current);asked++;if(ok){correct++;missed.delete(current);if(!sessionCorrectStreets.includes(current))sessionCorrectStreets.push(current);sessionMissedStreets=sessionMissedStreets.filter(s=>s!==current)}else{missed.add(current);if(!sessionMissedStreets.includes(current))sessionMissedStreets.push(current);sessionCorrectStreets=sessionCorrectStreets.filter(s=>s!==current)}localStorage.setItem(MISSED_KEY,JSON.stringify([...missed]));updateStats();updateDirectory();$('feedback').innerHTML=ok?`<span class="goodText">Correct — ${escapeHtml(current)}</span>`:`<span class="badText">${ans==='__TIME__'?'Time expired.':'Incorrect.'}</span> Correct answer: <b>${escapeHtml(current)}</b>`;hiLayer.clearLayers();highlight(current,ok?'#22c55e':'#ef4444',9,true);waiting=true;$('submitBtn').disabled=true;$('nextBtn').disabled=false}
 $('submitBtn').onclick=()=>grade($('answerInput').value);$('answerInput').onkeydown=e=>{if(e.key==='Enter')grade(e.target.value)};$('nextBtn').onclick=next;
 function mapAnswer(n){if($('mode').value==='locate'&&current&&!waiting)grade(n)}
 function updateStats(){$('correctStat').textContent=correct;$('askedStat').textContent=asked;$('pctStat').textContent=(asked?Math.round(correct/asked*100):0)+'%'}

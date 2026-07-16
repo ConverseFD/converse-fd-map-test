@@ -20,7 +20,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
 .personName b{display:block;font-size:16px}.personName span,.subtle{color:var(--muted);font-size:12px}
 .summaryStat strong{display:block;color:var(--gold);font-size:17px}.summaryStat span{color:var(--muted);font-size:10px;text-transform:uppercase}
 .personBody{padding:14px;border-top:1px solid var(--line);display:grid;grid-template-columns:minmax(260px,.8fr) minmax(500px,2fr);gap:14px}
-.weakBox{background:#031633;border:1px solid #294f7e;border-radius:9px;padding:12px}.weakBox h3{margin:0 0 9px;color:var(--gold)}
+.weakBox{background:#031633;border:1px solid #294f7e;border-radius:9px;padding:12px;max-height:320px;overflow-y:auto}.weakBox h3{margin:0 0 9px;color:var(--gold)}
 .weakItem{display:flex;justify-content:space-between;gap:10px;border-bottom:1px solid #234777;padding:7px 0}.weakItem:last-child{border:0}.weakItem b{color:var(--bad)}
 .badge{display:inline-block;border:1px solid #4773a5;background:#031633;padding:3px 7px;border-radius:999px;font-size:11px}
 .good{color:var(--good)}.bad{color:var(--bad)}
@@ -121,13 +121,19 @@ function groupedPeople(filtered){
    return {items,name:items[0].trainee_name||'Unnamed',employeeId:items[0].employee_id||'',avg,best,last:items[0].completed_at,uses:usesForPerson(items)}
  });
 }
-function weaknessCounts(items){
- const counts=new Map();
- for(const r of items){
-   const streets=Array.isArray(r.missed_streets)?r.missed_streets:[];
-   for(const street of streets)counts.set(street,(counts.get(street)||0)+1)
+function currentWeaknesses(items){
+ const state=new Map();
+ const chronological=[...items].sort((a,b)=>new Date(a.completed_at)-new Date(b.completed_at));
+ for(const r of chronological){
+   const missed=Array.isArray(r.missed_streets)?r.missed_streets:[];
+   const correct=Array.isArray(r.correct_streets)?r.correct_streets:[];
+   for(const street of missed){
+     const previous=state.get(street)||{misses:0,lastMissed:null};
+     state.set(street,{misses:previous.misses+1,lastMissed:r.completed_at});
+   }
+   for(const street of correct)state.delete(street);
  }
- return [...counts.entries()].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]));
+ return [...state.entries()].sort((a,b)=>b[1].misses-a[1].misses||a[0].localeCompare(b[0]));
 }
 function render(){
  const q=$('search').value.trim().toLowerCase(), type=$('typeFilter').value;
@@ -143,10 +149,10 @@ function render(){
  else people.sort((a,b)=>a.name.localeCompare(b.name));
 
  $('people').innerHTML=people.map((p,i)=>{
-   const weaknesses=weaknessCounts(p.items);
+   const weaknesses=currentWeaknesses(p.items);
    const weakHtml=weaknesses.length
-    ? weaknesses.slice(0,20).map(([street,count])=>`<div class="weakItem"><span>${esc(street)}</span><b>${count} miss${count===1?'':'es'}</b></div>`).join('')
-    : '<p class="subtle">No street-level weaknesses recorded. Older tests completed before this update will not include missed-street details.</p>';
+    ? weaknesses.map(([street,info])=>`<div class="weakItem"><span>${esc(street)}</span><b>${info.misses} miss${info.misses===1?'':'es'}</b></div>`).join('')
+    : '<p class="subtle">No current weak streets. Streets are removed after the firefighter later answers them correctly. Older tests may not include street-level details.</p>';
    const history=p.items.map(r=>`<tr>
     <td>${new Date(r.completed_at).toLocaleString()}</td>
     <td><span class="badge">${esc(r.test_mode||'Unknown')}</span></td>
@@ -196,11 +202,12 @@ function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&l
 $('search').oninput=render;$('sort').onchange=render;$('typeFilter').onchange=render;
 
 $('exportBtn').onclick=()=>{
- const head=['Date','Name','Employee ID','Assignment','Test Type','Street Group','Questions','Correct','Incorrect','Score','Missed Streets'];
+ const head=['Date','Name','Employee ID','Assignment','Test Type','Street Group','Questions','Correct','Incorrect','Score','Missed Streets','Correct Streets'];
  const rows=results.map(r=>[
   new Date(r.completed_at).toLocaleString(),r.trainee_name,r.employee_id||'',r.assignment,r.test_mode,r.street_group,
   r.question_count,r.correct_answers,r.incorrect_answers,r.score_percent,
-  Array.isArray(r.missed_streets)?r.missed_streets.join('; '):''
+  Array.isArray(r.missed_streets)?r.missed_streets.join('; '):'',
+  Array.isArray(r.correct_streets)?r.correct_streets.join('; '):''
  ]);
  const csv=[head,...rows].map(row=>row.map(v=>`"${String(v??'').replaceAll('"','""')}"`).join(',')).join('\n');
  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='CFD_Street_Training_Results.csv';a.click()
