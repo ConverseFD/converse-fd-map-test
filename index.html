@@ -972,49 +972,7 @@ document.querySelectorAll('#testLengthOptions .selectCard').forEach(btn=>btn.onc
 syncAppLogos();
 openLaunchScreen();
 
-  setTimeout(()=>launchName.focus(),100);
-}
-async function beginFromLaunch(){
-  const name=launchName.value.trim();
-  const badge=launchBadge.value.trim();
-  if(!name){launchStatus.textContent='Enter your full name.';launchStatus.className='launchStatus error';launchName.focus();return}
-  if(!badge){launchStatus.textContent='Enter your badge number.';launchStatus.className='launchStatus error';launchBadge.focus();return}
 
-  $('trainee').value=name;
-  $('employeeId').value=badge;
-  $('mode').value=launchTestType.value;
-  $('questionCount').value=launchDifficulty.value;
-  $('roadClass').value='all';
-  $('timeLimit').value=launchTestType.value==='study'?'0':'30';
-
-  localStorage.setItem('cfdTrainee',name);
-  localStorage.setItem('cfdEmployeeId',badge);
-
-  launchStatus.textContent='Loading the response area and street network…';
-  launchStatus.className='launchStatus loading';
-  document.getElementById('launchBtn').disabled=true;
-
-  try{
-    const firstDatasetLoad=!localStorage.getItem(FIRST_LOAD_KEY);
-    await loadData(firstDatasetLoad);
-    localStorage.setItem(FIRST_LOAD_KEY,'1');
-    launchStatus.textContent='Ready. Starting training…';
-    launchScreen.classList.add('hidden');
-    document.body.classList.remove('launchOpen');
-    setTimeout(()=>start(),150);
-  }catch(err){
-    launchStatus.textContent='Street data could not be loaded. Check the connection and try again.';
-    launchStatus.className='launchStatus error';
-  }finally{
-    document.getElementById('launchBtn').disabled=false;
-  }
-}
-document.getElementById('launchBtn').onclick=beginFromLaunch;
-launchName.addEventListener('keydown',e=>{if(e.key==='Enter')launchBadge.focus()});
-launchBadge.addEventListener('keydown',e=>{if(e.key==='Enter')beginFromLaunch()});
-document.getElementById('changeSessionBtn').onclick=openLaunchScreen;
-syncLaunchLogo();
-document.body.classList.add('launchOpen');
 
 recordVisit();
 
