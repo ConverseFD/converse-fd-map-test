@@ -146,7 +146,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
         <option value="average">Highest average score</option>
         <option value="attempts">Most attempts</option>
       </select>
-      <select id="typeFilter"><option value="">All test types</option></select>
+      <select id="areaFilter"><option value="">All response areas</option></select><select id="typeFilter"><option value="">All test types</option></select>
       <button id="exportBtn" class="primaryButton">Export CSV</button>
     </div>
 
@@ -172,7 +172,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
     <div class="card">
       <h2>All Test Attempts</h2>
       <div class="tableWrap"><table>
-        <thead><tr><th>Date</th><th>Name</th><th>ID</th><th>Assignment</th><th>Test Type</th><th>Street Group</th><th>Score</th><th>Correct</th><th>Questions</th></tr></thead>
+        <thead><tr><th>Date</th><th>Name</th><th>ID</th><th>Assignment</th><th>Response Area</th><th>Test Type</th><th>Street Group</th><th>Score</th><th>Correct</th><th>Questions</th></tr></thead>
         <tbody id="rows"></tbody>
       </table></div>
     </div>
@@ -218,7 +218,7 @@ async function showDashboard(){
   ]);
   if(r.error){alert('Access denied or results unavailable: '+r.error.message);return}
   results=r.data||[];visits=v.data||[];
-  populateTypes();render();
+  populateAreas();populateTypes();render();
 }
 
 function personKey(r){return (r.employee_id||'').trim()?'id:'+r.employee_id.trim().toLowerCase():'name:'+(r.trainee_name||'Unnamed').trim().toLowerCase()}
@@ -227,7 +227,7 @@ function usesForPerson(items){
   const names=new Set(items.map(r=>(r.trainee_name||'').trim().toLowerCase()).filter(Boolean));
   return visits.filter(v=>ids.has((v.employee_id||'').trim())||names.has((v.trainee_name||'').trim().toLowerCase())).length
 }
-function populateTypes(){
+function populateAreas(){const a=[...new Set(results.map(r=>r.response_area).filter(Boolean))].sort();$('areaFilter').innerHTML='<option value="">All response areas</option>'+a.map(x=>`<option>${esc(x)}</option>`).join('')}function populateTypes(){
   const types=[...new Set(results.map(r=>r.test_mode).filter(Boolean))].sort();
   $('typeFilter').innerHTML='<option value="">All test types</option>'+types.map(t=>`<option>${esc(t)}</option>`).join('');
 }
@@ -280,8 +280,8 @@ function renderReadiness(people){
   }).join('')||'<p class="subtle">No firefighter results yet.</p>';
 }
 function render(){
-  const q=$('search').value.trim().toLowerCase(),type=$('typeFilter').value;
-  const filtered=results.filter(r=>(!q||(r.trainee_name||'').toLowerCase().includes(q)||(r.employee_id||'').toLowerCase().includes(q))&&(!type||r.test_mode===type));
+  const q=$('search').value.trim().toLowerCase(),type=$('typeFilter').value,area=$('areaFilter').value;
+  const filtered=results.filter(r=>(!q||(r.trainee_name||'').toLowerCase().includes(q)||(r.employee_id||'').toLowerCase().includes(q))&&(!type||r.test_mode===type)&&(!area||r.response_area===area));
   let people=groupedPeople(filtered);
   const sort=$('sort').value;
   if(sort==='recent')people.sort((a,b)=>new Date(b.last)-new Date(a.last));
@@ -315,7 +315,7 @@ function render(){
     drawLineChart(document.getElementById(d.dataset.chart),chron.map(r=>r.score_percent||0),[]);
   }}));
 
-  $('rows').innerHTML=filtered.map(r=>`<tr><td>${new Date(r.completed_at).toLocaleString()}</td><td>${esc(r.trainee_name)}</td><td>${esc(r.employee_id||'—')}</td><td>${esc(r.assignment||'')}</td><td><span class="badge">${esc(r.test_mode||'Unknown')}</span></td><td>${esc(r.street_group||'')}</td><td><b>${r.score_percent}%</b></td><td>${r.correct_answers}</td><td>${r.question_count}</td></tr>`).join('');
+  $('rows').innerHTML=filtered.map(r=>`<tr><td>${new Date(r.completed_at).toLocaleString()}</td><td>${esc(r.trainee_name)}</td><td>${esc(r.employee_id||'—')}</td><td>${esc(r.assignment||'')}</td><td>${esc(r.response_area||'Not recorded')}</td><td><span class="badge">${esc(r.test_mode||'Unknown')}</span></td><td>${esc(r.street_group||'')}</td><td><b>${r.score_percent}%</b></td><td>${r.correct_answers}</td><td>${r.question_count}</td></tr>`).join('');
   $('totalTests').textContent=results.length;
   $('uniqueUsers').textContent=new Set(results.map(personKey)).size;
   $('avgScore').textContent=(results.length?Math.round(results.reduce((a,r)=>a+(r.score_percent||0),0)/results.length):0)+'%';
@@ -325,11 +325,11 @@ function render(){
   drawDepartmentChart();renderReadiness(allPeople);
 }
 function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
-$('search').oninput=render;$('sort').onchange=render;$('typeFilter').onchange=render;
+$('search').oninput=render;$('sort').onchange=render;$('typeFilter').onchange=render;$('areaFilter').onchange=render;
 
 $('exportBtn').onclick=()=>{
-  const head=['Date','Name','Employee ID','Assignment','Test Type','Street Group','Questions','Correct','Incorrect','Score','Missed Streets','Correct Streets'];
-  const rows=results.map(r=>[new Date(r.completed_at).toLocaleString(),r.trainee_name,r.employee_id||'',r.assignment,r.test_mode,r.street_group,r.question_count,r.correct_answers,r.incorrect_answers,r.score_percent,Array.isArray(r.missed_streets)?r.missed_streets.join('; '):'',Array.isArray(r.correct_streets)?r.correct_streets.join('; '):'']);
+  const head=['Date','Name','Employee ID','Assignment','Response Area','Test Type','Street Group','Questions','Correct','Incorrect','Score','Missed Streets','Correct Streets'];
+  const rows=results.map(r=>[new Date(r.completed_at).toLocaleString(),r.trainee_name,r.employee_id||'',r.assignment,r.response_area||'',r.test_mode,r.street_group,r.question_count,r.correct_answers,r.incorrect_answers,r.score_percent,Array.isArray(r.missed_streets)?r.missed_streets.join('; '):'',Array.isArray(r.correct_streets)?r.correct_streets.join('; '):'']);
   const csv=[head,...rows].map(row=>row.map(v=>`"${String(v??'').replaceAll('"','""')}"`).join(',')).join('\n');
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='CFD_Street_Training_Results.csv';a.click();
 };

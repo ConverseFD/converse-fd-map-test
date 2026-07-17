@@ -252,14 +252,14 @@ button:disabled{opacity:.42;cursor:not-allowed}
 .recentTestRow span{color:var(--muted);font-size:11px}.recentTestRow b{font-size:13px}.emptyState{padding:22px;text-align:center;color:var(--muted)}
 .setupHero{text-align:center;padding:34px 0 22px}.setupHero h2{margin:7px 0 0;font-size:30px}
 .selectionGroup{margin-bottom:22px}.selectionGroup h3{margin:0 0 10px;color:#dce7f5;font-size:13px;text-transform:uppercase;letter-spacing:.08em}
-.optionGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.selectCard{margin:0;min-height:115px;padding:14px;text-align:left;background:linear-gradient(180deg,rgba(10,42,85,.88),rgba(5,25,52,.94));border:1px solid rgba(100,150,205,.33);border-top:2px solid rgba(174,37,48,.55);color:white}
+.optionGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.areaGrid{grid-template-columns:repeat(3,1fr)}.selectCard{margin:0;min-height:115px;padding:14px;text-align:left;background:linear-gradient(180deg,rgba(10,42,85,.88),rgba(5,25,52,.94));border:1px solid rgba(100,150,205,.33);border-top:2px solid rgba(174,37,48,.55);color:white}
 .selectCard b{display:block;font-size:15px}.selectCard span{display:block;margin-top:7px;color:var(--muted);font-size:11px;line-height:1.4}.selectCard.selected{border-color:var(--gold);box-shadow:0 0 0 2px rgba(245,184,46,.15);background:linear-gradient(180deg,rgba(38,55,84,.98),rgba(11,31,58,.98))}
 .lengthGrid .selectCard{min-height:82px;text-align:center}.lengthGrid .selectCard b{font-size:26px}.setupStartButton{max-width:420px;display:block;margin:28px auto 0}.setupLoadStatus{text-align:center}
 .compactLaunchCard{width:min(620px,100%);padding:22px 26px}.compactLaunchCard .launchLogoWrap img{width:84px;height:96px}.compactLaunchCard .launchTitle{margin:0 0 14px}.compactLaunchCard .launchTitle h1{font-size:27px}
 .loginFields{display:grid;grid-template-columns:1fr 1fr;gap:10px}.compactLaunchCard .launchButton{max-width:260px;display:block;margin:16px auto 0}
 .launchCard,.homeCard,.selectCard,.mapShell,.card{box-shadow:inset 3px 0 0 rgba(150,27,38,.16),0 18px 50px rgba(0,0,0,.28)}
 header{border-bottom-color:rgba(174,37,48,.72)}
-@media(max-width:800px){
+@media(max-width:800px){.areaGrid{grid-template-columns:1fr}
   .homeGrid{grid-template-columns:1fr}.optionGrid{grid-template-columns:1fr 1fr}.recentTestRow{grid-template-columns:1fr 1fr}.loginFields{grid-template-columns:1fr}
 }
 @media(max-width:520px){.optionGrid{grid-template-columns:1fr}.screenHeader{align-items:flex-start}.screenActions{flex-direction:column}.welcomeRow{align-items:flex-start;flex-direction:column}}
@@ -417,7 +417,11 @@ body.launchOpen header,body.launchOpen main{filter:blur(2px);pointer-events:none
       <h2>Select a test mode and length</h2>
     </div>
 
-    <div class="selectionGroup">
+    <div class="selectionGroup"><h3>Response Area</h3><div class="optionGrid areaGrid" id="responseAreaOptions">
+<button class="selectCard" data-value="converse"><b>Converse Primary</b><span>Only streets in the Converse Primary Response Area.</span></button>
+<button class="selectCard" data-value="esd1"><b>ESD 1</b><span>Only streets in the ESD 1 Response Area.</span></button>
+<button class="selectCard selected" data-value="combined"><b>Combined Areas</b><span>Streets across both response areas.</span></button>
+</div></div><div class="selectionGroup">
       <h3>Test Type</h3>
       <div class="optionGrid" id="testTypeOptions">
         <button class="selectCard selected" data-value="name"><b>Name the Street</b><span>Identify the highlighted street.</span></button>
@@ -479,7 +483,7 @@ body.launchOpen header,body.launchOpen main{filter:blur(2px);pointer-events:none
 
     <input id="trainee" placeholder="Enter firefighter name">
     <input id="employeeId" placeholder="Enter department ID">
-    <select id="assignment">
+    <select id="responseAreaSelect"><option value="converse">Converse Primary Response Area</option><option value="esd1">ESD 1 Response Area</option><option value="combined" selected>Combined Response Area</option></select><select id="assignment">
       <option>Entire CFD Response Area</option>
       <option>City of Converse</option>
       <option>ESD 1</option>
@@ -639,6 +643,7 @@ async function saveCompletedResult(){
     trainee_name:$('trainee').value.trim() || 'Unnamed trainee',
     employee_id:$('employeeId').value.trim() || null,
     assignment:$('assignment').value,
+    response_area:RESPONSE_AREAS[selectedAreaKey].name,
     test_mode:$('mode').options[$('mode').selectedIndex].text,
     street_group:$('roadClass').options[$('roadClass').selectedIndex].text,
     question_count:asked,
@@ -674,11 +679,13 @@ function populatePrintReport(){
   if(headerLogo) $('printLogo').src=headerLogo.src;
 }
 
-const EMBEDDED_BOUNDARY={"type":"Feature","properties":{},"geometry":{"type":"Polygon","coordinates":[[[-98.333805,29.510969],[-98.333033,29.513583],[-98.344879,29.517092],[-98.341789,29.520751],[-98.344755,29.522389],[-98.346558,29.526122],[-98.352739,29.530527],[-98.337029,29.538627],[-98.334153,29.537096],[-98.33102,29.538627],[-98.325612,29.535491],[-98.322865,29.532468],[-98.321019,29.533812],[-98.318401,29.535155],[-98.315396,29.536835],[-98.308958,29.527316],[-98.305052,29.531796],[-98.303421,29.532468],[-98.298828,29.53635],[-98.297969,29.535155],[-98.298785,29.530527],[-98.288741,29.515221],[-98.283547,29.515445],[-98.280843,29.510629],[-98.28123,29.510181],[-98.279985,29.508426],[-98.284105,29.505962],[-98.277238,29.504207],[-98.278783,29.499353],[-98.269383,29.496926],[-98.273031,29.491063],[-98.27492,29.489793],[-98.276551,29.487403],[-98.281058,29.480718],[-98.277152,29.487665],[-98.285007,29.488038],[-98.287282,29.487366],[-98.28887,29.486507],[-98.29093,29.485162],[-98.298785,29.486544],[-98.299214,29.485312],[-98.297927,29.484938],[-98.299171,29.483482],[-98.299944,29.480606],[-98.299429,29.47717],[-98.297927,29.470149],[-98.296424,29.466563],[-98.30591,29.468841],[-98.308056,29.462603],[-98.310675,29.463201],[-98.31076,29.46279],[-98.316555,29.461147],[-98.315525,29.464322],[-98.319989,29.470821],[-98.327329,29.48098],[-98.328573,29.483071],[-98.329561,29.483557],[-98.32926,29.484154],[-98.330033,29.484714],[-98.33102,29.48647],[-98.331793,29.48703],[-98.33205,29.488262],[-98.332951,29.488822],[-98.3369,29.49476],[-98.337931,29.495805],[-98.339476,29.49644],[-98.341579,29.496701],[-98.343253,29.496291],[-98.344712,29.495768],[-98.346515,29.495581],[-98.348189,29.495917],[-98.349219,29.496664],[-98.34806,29.496403],[-98.34248,29.500211],[-98.337158,29.506111],[-98.335959,29.507544],[-98.337397,29.508739],[-98.333805,29.510969]]]}};
-const CACHE_KEY='cfdStreetDatasetV2', CACHE_DATE_KEY='cfdStreetDatasetDateV2', MISSED_KEY='cfdMissedV2';
+const RESPONSE_AREAS={"converse":{"name":"Converse Primary Response Area","boundary":{"type":"Feature","properties":{"name":"Converse Primary Response Area"},"geometry":{"type":"Polygon","coordinates":[[[-98.276927,29.486812],[-98.284482,29.488474],[-98.28489,29.487205],[-98.287122,29.487298],[-98.287787,29.486458],[-98.28989,29.486551],[-98.29077,29.485636],[-98.298925,29.486495],[-98.299269,29.485244],[-98.297852,29.484945],[-98.299054,29.483526],[-98.299848,29.48108],[-98.299784,29.479175],[-98.298196,29.472564],[-98.303325,29.473965],[-98.304741,29.468624],[-98.304827,29.4684],[-98.313455,29.470585],[-98.312918,29.472359],[-98.312811,29.47376],[-98.31339,29.475142],[-98.314163,29.476748],[-98.314893,29.477457],[-98.313991,29.47826],[-98.310514,29.489146],[-98.310386,29.489819],[-98.310386,29.490267],[-98.310514,29.490846],[-98.311545,29.492899],[-98.311952,29.493497],[-98.312661,29.493291],[-98.315107,29.496073],[-98.314614,29.496353],[-98.315021,29.496914],[-98.316631,29.498109],[-98.316974,29.49766],[-98.317275,29.497903],[-98.318949,29.497007],[-98.318604,29.496726],[-98.319634,29.495447],[-98.320761,29.496148],[-98.323369,29.493711],[-98.324281,29.495485],[-98.325021,29.495177],[-98.325504,29.496222],[-98.326191,29.497016],[-98.325565,29.499138],[-98.325617,29.499166],[-98.325448,29.499656],[-98.323103,29.499118],[-98.322947,29.499589],[-98.322008,29.499538],[-98.321177,29.50226],[-98.330922,29.504553],[-98.330074,29.50711],[-98.328657,29.508324],[-98.328325,29.51131],[-98.332574,29.509882],[-98.332885,29.510162],[-98.333454,29.511012],[-98.327198,29.513224],[-98.33075,29.517667],[-98.331544,29.518553],[-98.33369,29.518945],[-98.335847,29.519496],[-98.334481,29.523731],[-98.33373,29.524309],[-98.342207,29.535965],[-98.336949,29.538652],[-98.336595,29.538186],[-98.336177,29.537906],[-98.335747,29.537663],[-98.335222,29.537458],[-98.334653,29.537346],[-98.334181,29.537253],[-98.333859,29.537234],[-98.331101,29.538596],[-98.326079,29.535741],[-98.32418,29.533193],[-98.322913,29.532428],[-98.321755,29.533315],[-98.321057,29.533809],[-98.315456,29.53674],[-98.308191,29.526129],[-98.305347,29.529526],[-98.304929,29.529386],[-98.301109,29.534005],[-98.300926,29.533865],[-98.300873,29.533707],[-98.288629,29.515125],[-98.283564,29.515377],[-98.282545,29.513847],[-98.282802,29.513707],[-98.280806,29.510608],[-98.281246,29.510365],[-98.279883,29.50834],[-98.284337,29.506062],[-98.284215,29.50587],[-98.277216,29.504173],[-98.278836,29.499175],[-98.273653,29.497928],[-98.275343,29.492906],[-98.273723,29.497797],[-98.273619,29.497925],[-98.269544,29.496912],[-98.26941,29.49679],[-98.269442,29.496599],[-98.269544,29.496454],[-98.27295,29.491366],[-98.274603,29.490153],[-98.274924,29.489891],[-98.275171,29.489518],[-98.276927,29.486812]]]}}},"esd1":{"name":"ESD 1 Response Area","boundary":{"type":"Feature","properties":{"name":"ESD 1 Response Area"},"geometry":{"type":"MultiPolygon","coordinates":[[[[-98.352782,29.530574],[-98.342173,29.535942],[-98.333717,29.524286],[-98.33449,29.523726],[-98.335906,29.51947],[-98.333632,29.518901],[-98.331518,29.518537],[-98.331121,29.517967],[-98.33082,29.517669],[-98.327236,29.513207],[-98.333986,29.510808],[-98.333256,29.513049],[-98.333267,29.513459],[-98.333438,29.51373],[-98.333792,29.513935],[-98.342496,29.516087],[-98.341079,29.517669],[-98.341981,29.518131],[-98.342217,29.519538],[-98.341916,29.519566],[-98.341809,29.520751],[-98.342727,29.521022],[-98.343349,29.521218],[-98.343708,29.521395],[-98.344111,29.521675],[-98.344631,29.522128],[-98.344814,29.522398],[-98.345157,29.522921],[-98.345329,29.523388],[-98.34549,29.523943],[-98.345672,29.524587],[-98.345855,29.52504],[-98.346321,29.525674],[-98.347008,29.526187],[-98.348671,29.527429],[-98.350608,29.528763],[-98.352921,29.530364],[-98.352782,29.530574]]],[[[-98.306069,29.468736],[-98.308086,29.462629],[-98.31064,29.463189],[-98.310855,29.462685],[-98.316563,29.461247],[-98.315619,29.464198],[-98.319675,29.469913],[-98.319654,29.470622],[-98.320126,29.470697],[-98.325105,29.478036],[-98.328565,29.482691],[-98.328501,29.48292],[-98.328586,29.483027],[-98.32871,29.48313],[-98.329499,29.483517],[-98.329322,29.484003],[-98.329745,29.484213],[-98.329842,29.48432],[-98.330979,29.486258],[-98.331017,29.486444],[-98.331049,29.486617],[-98.331022,29.48678],[-98.33099,29.487],[-98.331452,29.487256],[-98.331092,29.487882],[-98.332305,29.488628],[-98.332949,29.489263],[-98.336844,29.494986],[-98.337864,29.495929],[-98.338815,29.496477],[-98.339824,29.496785],[-98.340833,29.496943],[-98.341916,29.496943],[-98.342988,29.496729],[-98.343975,29.496346],[-98.344973,29.495963],[-98.345799,29.495833],[-98.346819,29.49587],[-98.348192,29.496262],[-98.34317,29.499716],[-98.341421,29.501247],[-98.338075,29.505562],[-98.337088,29.50685],[-98.336358,29.507653],[-98.33551,29.508269],[-98.334824,29.508755],[-98.334201,29.509165],[-98.333493,29.509473],[-98.332806,29.509763],[-98.331991,29.510061],[-98.330821,29.510491],[-98.328332,29.511312],[-98.328664,29.508372],[-98.330091,29.507121],[-98.330928,29.504545],[-98.321206,29.502267],[-98.322022,29.49956],[-98.322977,29.499616],[-98.323106,29.499103],[-98.325466,29.499653],[-98.325627,29.499177],[-98.325565,29.49913],[-98.326199,29.497014],[-98.325504,29.496218],[-98.325032,29.495175],[-98.324281,29.495481],[-98.323369,29.493684],[-98.321234,29.49565],[-98.320765,29.496145],[-98.319627,29.495448],[-98.318858,29.496407],[-98.3186,29.496738],[-98.318943,29.497011],[-98.317275,29.497908],[-98.316977,29.497658],[-98.316631,29.498111],[-98.315027,29.496911],[-98.314617,29.496356],[-98.315105,29.496076],[-98.312662,29.493293],[-98.311951,29.493501],[-98.31088,29.491568],[-98.310516,29.490846],[-98.310387,29.490279],[-98.310387,29.489822],[-98.310516,29.48915],[-98.310771,29.488364],[-98.313989,29.478268],[-98.314893,29.477467],[-98.314169,29.476741],[-98.312812,29.473757],[-98.312922,29.472351],[-98.313458,29.470591],[-98.306069,29.468736]]]]}}},"combined":{"name":"Combined Response Area","boundary":{"type":"Feature","properties":{"name":"Combined Response Area"},"geometry":{"type":"Polygon","coordinates":[[[-98.333805,29.510969],[-98.333033,29.513583],[-98.344879,29.517092],[-98.341789,29.520751],[-98.344755,29.522389],[-98.346558,29.526122],[-98.352739,29.530527],[-98.337029,29.538627],[-98.334153,29.537096],[-98.33102,29.538627],[-98.325612,29.535491],[-98.322865,29.532468],[-98.321019,29.533812],[-98.318401,29.535155],[-98.315396,29.536835],[-98.308958,29.527316],[-98.305052,29.531796],[-98.303421,29.532468],[-98.298828,29.53635],[-98.297969,29.535155],[-98.298785,29.530527],[-98.288741,29.515221],[-98.283547,29.515445],[-98.280843,29.510629],[-98.28123,29.510181],[-98.279985,29.508426],[-98.284105,29.505962],[-98.277238,29.504207],[-98.278783,29.499353],[-98.269383,29.496926],[-98.273031,29.491063],[-98.27492,29.489793],[-98.276551,29.487403],[-98.281058,29.480718],[-98.277152,29.487665],[-98.285007,29.488038],[-98.287282,29.487366],[-98.28887,29.486507],[-98.29093,29.485162],[-98.298785,29.486544],[-98.299214,29.485312],[-98.297927,29.484938],[-98.299171,29.483482],[-98.299944,29.480606],[-98.299429,29.47717],[-98.297927,29.470149],[-98.296424,29.466563],[-98.30591,29.468841],[-98.308056,29.462603],[-98.310675,29.463201],[-98.31076,29.46279],[-98.316555,29.461147],[-98.315525,29.464322],[-98.319989,29.470821],[-98.327329,29.48098],[-98.328573,29.483071],[-98.329561,29.483557],[-98.32926,29.484154],[-98.330033,29.484714],[-98.33102,29.48647],[-98.331793,29.48703],[-98.33205,29.488262],[-98.332951,29.488822],[-98.3369,29.49476],[-98.337931,29.495805],[-98.339476,29.49644],[-98.341579,29.496701],[-98.343253,29.496291],[-98.344712,29.495768],[-98.346515,29.495581],[-98.348189,29.495917],[-98.349219,29.496664],[-98.34806,29.496403],[-98.34248,29.500211],[-98.337158,29.506111],[-98.335959,29.507544],[-98.337397,29.508739],[-98.333805,29.510969]]]}}}};
+let selectedAreaKey='combined';
+let EMBEDDED_BOUNDARY=RESPONSE_AREAS[selectedAreaKey].boundary;
+const CACHE_KEY_BASE='cfdStreetDatasetV3', CACHE_DATE_KEY_BASE='cfdStreetDatasetDateV3', MISSED_KEY='cfdMissedV2';function currentCacheKey(){return CACHE_KEY_BASE+'_'+selectedAreaKey}function currentCacheDateKey(){return CACHE_DATE_KEY_BASE+'_'+selectedAreaKey}
 const map=L.map('map',{preferCanvas:true,zoomControl:true});
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'Map data © OpenStreetMap contributors'}).addTo(map);
-const boundaryLayer=L.geoJSON(EMBEDDED_BOUNDARY,{style:{color:'#b91c1c',weight:4,fillOpacity:.06,dashArray:'9 6'}}).addTo(map);
+let boundaryLayer=L.geoJSON(EMBEDDED_BOUNDARY,{style:{color:'#b91c1c',weight:4,fillOpacity:.06,dashArray:'9 6'}}).addTo(map);
 map.fitBounds(boundaryLayer.getBounds(),{padding:[20,20]});
 const roadsLayer=L.layerGroup().addTo(map), hiLayer=L.layerGroup().addTo(map);
 let roadFeatures=[],grouped={},activePool=[],queue=[],current=null,correct=0,asked=0,waiting=false,timer=null,timeLeft=0,labelsOn=false;
@@ -687,7 +694,7 @@ const $=id=>document.getElementById(id);
 function status(t,c=''){$('dataStatus').textContent=t;$('dataStatus').className='status '+c}
 function norm(s){return (s||'').toLowerCase().replace(/[^a-z0-9 ]/g,'').replace(/\b(street|st)\b/g,'st').replace(/\b(road|rd)\b/g,'rd').replace(/\b(drive|dr)\b/g,'dr').replace(/\b(lane|ln)\b/g,'ln').replace(/\b(avenue|ave)\b/g,'ave').replace(/\b(boulevard|blvd)\b/g,'blvd').replace(/\b(highway|hwy)\b/g,'hwy').replace(/\b(parkway|pkwy)\b/g,'pkwy').replace(/\s+/g,' ').trim()}
 function cat(hw){return ['motorway','trunk','primary','secondary','tertiary','motorway_link','trunk_link','primary_link','secondary_link','tertiary_link'].includes(hw)?'major':'residential'}
-function bbox(){const b=boundaryLayer.getBounds();return [b.getSouth(),b.getWest(),b.getNorth(),b.getEast()]}
+function bbox(){const b=boundaryLayer.getBounds();return [b.getSouth(),b.getWest(),b.getNorth(),b.getEast()]}function applySelectedResponseArea(){EMBEDDED_BOUNDARY=RESPONSE_AREAS[selectedAreaKey].boundary;if(boundaryLayer)map.removeLayer(boundaryLayer);boundaryLayer=L.geoJSON(EMBEDDED_BOUNDARY,{style:{color:'#b91c1c',weight:4,fillOpacity:.06,dashArray:'9 6'}}).addTo(map);map.fitBounds(boundaryLayer.getBounds(),{padding:[20,20]});$('responseAreaSelect').value=selectedAreaKey;}
 function escapeHtml(s){return s.replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function build(data){
  roadFeatures=data;grouped={};
@@ -700,7 +707,7 @@ function drawRoads(){
  for(const f of roadFeatures)L.geoJSON(f,{style:{color:'#64748b',weight:f.properties.category==='major'?4:2,opacity:.72},onEachFeature:(ft,l)=>{if(labelsOn)l.bindTooltip(ft.properties.name,{permanent:true,direction:'center',className:'streetLabel'});else l.bindTooltip(ft.properties.name,{sticky:true});l.on('click',()=>mapAnswer(ft.properties.name))}}).addTo(roadsLayer);
 }
 async function loadData(force=false){
- const cached=localStorage.getItem(CACHE_KEY);
+ const cached=localStorage.getItem(currentCacheKey());
  if(cached&&!force){try{build(JSON.parse(cached));$('cachePill').textContent='Cached';status('Street dataset loaded from this device.','goodText');return}catch(e){}}
  status('Downloading the street network for the embedded response area…','warnText');
  const [s,w,n,e]=bbox(),q=`[out:json][timeout:60];way["highway"]["name"](${s},${w},${n},${e});out geom;`;
@@ -710,7 +717,7 @@ async function loadData(force=false){
  if(!data){status('Street service unavailable. Reopen later or use a device that already has the cached dataset.','badText');throw last}
  const features=[];
  for(const el of data.elements){if(!el.geometry||!el.tags?.name)continue;const coords=el.geometry.map(p=>[p.lon,p.lat]);if(coords.length<2)continue;const line=turf.lineString(coords,{id:el.id,name:el.tags.name,highway:el.tags.highway,category:cat(el.tags.highway)});try{if(turf.booleanIntersects(line,EMBEDDED_BOUNDARY))features.push(line)}catch(e){}}
- localStorage.setItem(CACHE_KEY,JSON.stringify(features));localStorage.setItem(CACHE_DATE_KEY,new Date().toISOString());
+ localStorage.setItem(currentCacheKey(),JSON.stringify(features));localStorage.setItem(currentCacheDateKey(),new Date().toISOString());
  build(features);$('cachePill').textContent='Cached';status(`Ready: ${Object.keys(grouped).length} streets stored locally.`,'goodText');
 }
 $('refreshBtn').onclick=()=>{if(confirm('Refresh the cached street dataset now?'))loadData(true)};
@@ -770,7 +777,7 @@ const launchBadge=document.getElementById('launchBadge');
 const launchStatus=document.getElementById('launchStatus');
 const homeScreen=document.getElementById('homeScreen');
 const testSetupScreen=document.getElementById('testSetupScreen');
-let configuredMode='name',configuredLength='20',configuredTime='30';
+let configuredMode='name',configuredLength='20',configuredTime='30',configuredArea='combined';
 
 function syncAppLogos(){
   const headerLogo=document.querySelector('.logoWrap img');
@@ -834,16 +841,16 @@ function savePersonalResult(){
   const all=JSON.parse(localStorage.getItem(PERSONAL_RESULTS_KEY)||'[]');
   const id=(sessionFinishedAt||new Date()).toISOString()+'-'+Math.random().toString(36).slice(2);
   if(all.some(r=>r.id===id))return;
-  all.push({id,trainee_name:$('trainee').value.trim(),employee_id:$('employeeId').value.trim(),assignment:$('assignment').value,test_mode:$('mode').options[$('mode').selectedIndex].text,street_group:$('roadClass').options[$('roadClass').selectedIndex].text,question_count:asked,correct_answers:correct,incorrect_answers:asked-correct,score_percent:Math.round(correct/asked*100),started_at:(sessionStartedAt||new Date()).toISOString(),completed_at:(sessionFinishedAt||new Date()).toISOString(),missed_streets:[...sessionMissedStreets],correct_streets:[...sessionCorrectStreets]});
+  all.push({id,trainee_name:$('trainee').value.trim(),employee_id:$('employeeId').value.trim(),assignment:$('assignment').value,response_area:RESPONSE_AREAS[selectedAreaKey].name,test_mode:$('mode').options[$('mode').selectedIndex].text,street_group:$('roadClass').options[$('roadClass').selectedIndex].text,question_count:asked,correct_answers:correct,incorrect_answers:asked-correct,score_percent:Math.round(correct/asked*100),started_at:(sessionStartedAt||new Date()).toISOString(),completed_at:(sessionFinishedAt||new Date()).toISOString(),missed_streets:[...sessionMissedStreets],correct_streets:[...sessionCorrectStreets]});
   localStorage.setItem(PERSONAL_RESULTS_KEY,JSON.stringify(all));
 }
 function openTestSetup(){showOnly(testSetupScreen)}
 async function beginConfiguredTest(){
-  $('mode').value=configuredMode;$('questionCount').value=configuredLength;$('roadClass').value='all';$('timeLimit').value=configuredMode==='study'?'0':configuredTime;
+  selectedAreaKey=configuredArea;applySelectedResponseArea();$('mode').value=configuredMode;$('questionCount').value=configuredLength;$('roadClass').value='all';$('timeLimit').value=configuredMode==='study'?'0':configuredTime;
   const s=document.getElementById('setupLoadStatus');s.textContent='Loading response area and streets…';s.className='launchStatus loading';
   document.getElementById('beginConfiguredTestBtn').disabled=true;
   try{
-    const first=!localStorage.getItem(FIRST_LOAD_KEY);await loadData(first);localStorage.setItem(FIRST_LOAD_KEY,'1');
+    const areaFirstKey=FIRST_LOAD_KEY+'_'+selectedAreaKey;const first=!localStorage.getItem(areaFirstKey);await loadData(first);localStorage.setItem(areaFirstKey,'1');
     showOnly(null);const activeLabel=document.getElementById('activeTraineeLabel');if(activeLabel)activeLabel.textContent=($('trainee').value||'Firefighter')+' • Badge '+($('employeeId').value||'—');setTimeout(()=>start(),120);
   }catch(e){s.textContent='Street data could not be loaded. Check the connection and try again.';s.className='launchStatus error'}
   finally{document.getElementById('beginConfiguredTestBtn').disabled=false}
@@ -858,6 +865,7 @@ document.getElementById('homeChangeUserBtn').onclick=openLaunchScreen;
 document.getElementById('homeAdminBtn').onclick=()=>location.href='admin.html?login=1';
 document.getElementById('testHomeBtn').onclick=()=>{showOnly(homeScreen);renderHome()};
 document.getElementById('changeSessionBtn').onclick=openLaunchScreen;
+document.querySelectorAll('#responseAreaOptions .selectCard').forEach(btn=>btn.onclick=()=>{document.querySelectorAll('#responseAreaOptions .selectCard').forEach(b=>b.classList.remove('selected'));btn.classList.add('selected');configuredArea=btn.dataset.value});
 document.querySelectorAll('#testTypeOptions .selectCard').forEach(btn=>btn.onclick=()=>{document.querySelectorAll('#testTypeOptions .selectCard').forEach(b=>b.classList.remove('selected'));btn.classList.add('selected');configuredMode=btn.dataset.value});
 document.querySelectorAll('#testLengthOptions .selectCard').forEach(btn=>btn.onclick=()=>{document.querySelectorAll('#testLengthOptions .selectCard').forEach(b=>b.classList.remove('selected'));btn.classList.add('selected');configuredLength=btn.dataset.value});
 
