@@ -431,6 +431,25 @@ body.launchOpen header,body.launchOpen main{filter:blur(2px);pointer-events:none
       </div>
     </div>
 
+
+    <div class="selectionGroup">
+      <h3>Road Group</h3>
+      <div class="optionGrid areaGrid" id="roadGroupOptions">
+        <button class="selectCard selected" data-value="all">
+          <b>All Roads</b>
+          <span>Include both main roads and neighborhood streets.</span>
+        </button>
+        <button class="selectCard" data-value="major">
+          <b>Main Roads</b>
+          <span>Focus on highways, arterials, collectors, and other major roads.</span>
+        </button>
+        <button class="selectCard" data-value="residential">
+          <b>Neighborhood Roads</b>
+          <span>Focus on residential streets, courts, lanes, and subdivision roads.</span>
+        </button>
+      </div>
+    </div>
+
     <div class="selectionGroup">
       <h3>Test Length</h3>
       <div class="optionGrid lengthGrid" id="testLengthOptions">
@@ -777,7 +796,7 @@ const launchBadge=document.getElementById('launchBadge');
 const launchStatus=document.getElementById('launchStatus');
 const homeScreen=document.getElementById('homeScreen');
 const testSetupScreen=document.getElementById('testSetupScreen');
-let configuredMode='name',configuredLength='20',configuredTime='30',configuredArea='combined';
+let configuredMode='name',configuredLength='20',configuredTime='30',configuredArea='combined',configuredRoadGroup='all';
 
 function syncAppLogos(){
   const headerLogo=document.querySelector('.logoWrap img');
@@ -846,7 +865,7 @@ function savePersonalResult(){
 }
 function openTestSetup(){showOnly(testSetupScreen)}
 async function beginConfiguredTest(){
-  selectedAreaKey=configuredArea;applySelectedResponseArea();$('mode').value=configuredMode;$('questionCount').value=configuredLength;$('roadClass').value='all';$('timeLimit').value=configuredMode==='study'?'0':configuredTime;
+  selectedAreaKey=configuredArea;applySelectedResponseArea();$('mode').value=configuredMode;$('questionCount').value=configuredLength;$('roadClass').value=configuredMode==='study'?'all':configuredRoadGroup;$('timeLimit').value=configuredMode==='study'?'0':configuredTime;
   const s=document.getElementById('setupLoadStatus');s.textContent='Loading response area and streets…';s.className='launchStatus loading';
   document.getElementById('beginConfiguredTestBtn').disabled=true;
   try{
@@ -867,6 +886,13 @@ document.getElementById('testHomeBtn').onclick=()=>{showOnly(homeScreen);renderH
 document.getElementById('changeSessionBtn').onclick=openLaunchScreen;
 document.querySelectorAll('#responseAreaOptions .selectCard').forEach(btn=>btn.onclick=()=>{document.querySelectorAll('#responseAreaOptions .selectCard').forEach(b=>b.classList.remove('selected'));btn.classList.add('selected');configuredArea=btn.dataset.value});
 document.querySelectorAll('#testTypeOptions .selectCard').forEach(btn=>btn.onclick=()=>{document.querySelectorAll('#testTypeOptions .selectCard').forEach(b=>b.classList.remove('selected'));btn.classList.add('selected');configuredMode=btn.dataset.value});
+
+document.querySelectorAll('#roadGroupOptions .selectCard').forEach(btn=>btn.onclick=()=>{
+  document.querySelectorAll('#roadGroupOptions .selectCard').forEach(b=>b.classList.remove('selected'));
+  btn.classList.add('selected');
+  configuredRoadGroup=btn.dataset.value;
+});
+
 document.querySelectorAll('#testLengthOptions .selectCard').forEach(btn=>btn.onclick=()=>{document.querySelectorAll('#testLengthOptions .selectCard').forEach(b=>b.classList.remove('selected'));btn.classList.add('selected');configuredLength=btn.dataset.value});
 
 document.querySelectorAll('#timeLimitOptions .selectCard').forEach(btn=>btn.onclick=()=>{
