@@ -344,6 +344,20 @@ body.launchOpen header,body.launchOpen main{filter:blur(2px);pointer-events:none
 </style>
 
 
+
+<script>
+(function(){
+  const q=new URLSearchParams(location.search);
+  const h=new URLSearchParams(location.hash.replace(/^#/,''));
+  const t=q.get('type')||h.get('type');
+  const auth=t==='invite'||t==='recovery'||q.has('code')||h.has('access_token')||h.has('refresh_token');
+  if(auth && !location.pathname.endsWith('/setup-account.html')){
+    const u=new URL('setup-account.html',location.href);
+    u.search=location.search;u.hash=location.hash;location.replace(u.toString());
+  }
+})();
+</script>
+
 </head>
 <body>
 

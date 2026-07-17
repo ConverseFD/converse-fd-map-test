@@ -118,7 +118,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
     <label for="password">Password</label>
     <input id="password" type="password" autocomplete="current-password" placeholder="Password">
     <div class="adminLoginActions">
-      <button id="loginBtn" class="primaryButton">Sign In</button>
+      <button id="loginBtn" class="primaryButton">Sign In</button><button id="forgotPasswordBtn" class="secondaryButton" type="button">Forgot Password</button>
       <button id="backToTrainerLoginBtn" class="secondaryButton">Back to Firefighter Login</button>
     </div>
     <p id="loginError" class="error"></p>
@@ -199,6 +199,15 @@ $('loginBtn').onclick=async()=>{
   await showDashboard();
 };
 $('password').onkeydown=e=>{if(e.key==='Enter')$('loginBtn').click()};
+$('forgotPasswordBtn').onclick=async()=>{
+  if(!db){$('loginError').textContent='Configure config.js first.';return}
+  const email=$('email').value.trim();
+  if(!email){$('loginError').textContent='Enter your email address first.';return}
+  const redirectTo=new URL('setup-account.html',location.href).toString();
+  const {error}=await db.auth.resetPasswordForEmail(email,{redirectTo});
+  $('loginError').style.color=error?'#ffaaa8':'#7ef0b2';
+  $('loginError').textContent=error?error.message:'Password reset email sent. Check your inbox.';
+};
 $('logoutBtn').onclick=async()=>{await db.auth.signOut();location.reload()};
 
 async function showDashboard(){
