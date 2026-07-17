@@ -102,7 +102,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
 @media(max-width:1100px){.grid{grid-template-columns:repeat(2,1fr)}.dashboardGrid{grid-template-columns:1fr}.person summary{grid-template-columns:2fr 1fr 1fr}.person summary .optional{display:none}.personBody{grid-template-columns:1fr}}
 @media(max-width:650px){.dashboardHeader{align-items:flex-start}.dashboardBrand img{height:56px}.headerActions{flex-direction:column}.grid{grid-template-columns:1fr}.person summary{grid-template-columns:1fr 1fr}.personName{grid-column:1/-1}}
 
-.userManagementHeader{display:flex;justify-content:space-between;gap:14px}.smallAction{width:auto!important}.inviteUserForm{display:grid;grid-template-columns:1.2fr 1fr .8fr auto;gap:10px;margin:15px 0}.inviteUserForm input,.inviteUserForm select{padding:10px;border-radius:9px;border:1px solid #5278a3;background:#031633;color:white}.inviteButton{width:auto!important}.userManagementStatus{min-height:20px;font-size:12px}.userManagementStatus.good{color:#4ee49a}.userManagementStatus.bad{color:#ff8f8f}.userTableWrap{overflow:auto;max-height:520px}.userTable{min-width:900px}.userIdentity span{display:block;color:#9fb0c8;font-size:11px}.userActions{display:flex;gap:6px;flex-wrap:wrap}.userActions button{width:auto!important;padding:6px 8px!important;font-size:10px!important}.userStatusBadge{display:inline-block;padding:4px 8px;border-radius:999px;font-size:10px;font-weight:800}.statusConfirmed{color:#76ecad}.statusInvited{color:#ffd66b}.statusDisabled{color:#ff9da6}@media(max-width:900px){.inviteUserForm{grid-template-columns:1fr 1fr}}@media(max-width:600px){.inviteUserForm{grid-template-columns:1fr}}
+.userManagementHeader{display:flex;justify-content:space-between;gap:14px}.userManagementActions{display:flex;gap:8px;flex-wrap:wrap}.smallAction{width:auto!important}.inviteUserForm{display:grid;grid-template-columns:1.2fr 1fr .8fr auto;gap:10px;margin:15px 0}.inviteUserForm input,.inviteUserForm select{padding:10px;border-radius:9px;border:1px solid #5278a3;background:#031633;color:white}.inviteButton{width:auto!important}.userManagementStatus{min-height:20px;font-size:12px}.userManagementStatus.good{color:#4ee49a}.userManagementStatus.bad{color:#ff8f8f}.userTableWrap{overflow:auto;max-height:520px}.userTable{min-width:900px}.userIdentity span{display:block;color:#9fb0c8;font-size:11px}.userActions{display:flex;gap:6px;flex-wrap:wrap}.userActions button{width:auto!important;padding:6px 8px!important;font-size:10px!important}.userStatusBadge{display:inline-block;padding:4px 8px;border-radius:999px;font-size:10px;font-weight:800}.statusConfirmed{color:#76ecad}.statusInvited{color:#ffd66b}.statusDisabled{color:#ff9da6}@media(max-width:900px){.inviteUserForm{grid-template-columns:1fr 1fr}}@media(max-width:600px){.inviteUserForm{grid-template-columns:1fr}}
 
 </style>
 </head>
@@ -187,7 +187,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
 <section id="userManagementCard" class="card hidden">
   <div class="userManagementHeader">
     <div><h2>User Management</h2><p class="subtle">Invite members and manage access without UUIDs or SQL.</p></div>
-    <button id="refreshUsersBtn" class="secondaryButton smallAction">Refresh Users</button>
+    <div class="userManagementActions"><button id="createUserPageBtn" class="primaryButton smallAction">Create User</button><button id="refreshUsersBtn" class="secondaryButton smallAction">Refresh Users</button></div>
   </div>
   <div class="inviteUserForm">
     <input id="inviteEmail" type="email" placeholder="member@conversefd.org">
@@ -398,6 +398,7 @@ async function loadManagedUsers(){
   body.querySelectorAll('button[data-action]').forEach(b=>b.onclick=async()=>{if(['remove_admin','remove_owner','disable'].includes(b.dataset.action)&&!confirm('Apply this change?'))return;await callUserManager(b.dataset.action,{user_id:b.dataset.id});loadManagedUsers()});
  }catch(_){body.innerHTML='<tr><td colspan="5">Unable to load users.</td></tr>'}
 }
+$('createUserPageBtn')?.addEventListener('click',()=>location.href='create-user.html');
 $('refreshUsersBtn')?.addEventListener('click',loadManagedUsers);
 $('inviteUserBtn')?.addEventListener('click',async()=>{const email=$('inviteEmail').value.trim(),name=$('inviteName').value.trim();if(!email)return;await callUserManager('invite',{email,display_name:name,make_admin:$('inviteRole').value==='admin',redirect_to:new URL('setup-account.html',location.href).toString()});$('userManagementStatus').className='userManagementStatus good';$('userManagementStatus').textContent='Invitation sent.';loadManagedUsers()});
 
